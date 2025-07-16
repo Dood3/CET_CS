@@ -5,6 +5,8 @@
 // sudo apt update
 // sudo apt install -y dotnet-sdk-8.0
 // dotnet --list-sdks
+// Compile to standalone:
+// dotnet publish -c Release --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true -p:PublishTrimmed=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishDir=publish --force
 
 
 using System;
@@ -102,11 +104,14 @@ namespace CommandEmbedder
         }
 
         static string GenerateSourceCode(string command, string targetOS)
-        {
-            string shellCommand = targetOS == "windows" ? "cmd" : "sh";
-            string shellArgs = targetOS == "windows" ? "/C" : "-c";
+{
+    string shellCommand = targetOS == "windows" ? "cmd" : "sh";
+    string shellArgs = targetOS == "windows" ? "/C" : "-c";
+    
+    // Properly escape the command for shell execution
+    string escapedCommand = command.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
-            return $@"using System;
+    return $@"using System;
 using System.Diagnostics;
 
 namespace EmbeddedCommand
@@ -121,7 +126,7 @@ namespace EmbeddedCommand
                 var processInfo = new ProcessStartInfo
                 {{
                     FileName = ""{shellCommand}"",
-                    Arguments = ""{shellArgs} {command.Replace("\"", "\\\"")}"",
+                    Arguments = ""{shellArgs} \""{escapedCommand}\"""",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -164,7 +169,8 @@ namespace EmbeddedCommand
         }}
     }}
 }}";
-        }
+}
+        
         static string GenerateProjectFile()
         {
             return @"<Project Sdk=""Microsoft.NET.Sdk"">
